@@ -61,12 +61,18 @@ Processor::Processor(const char* program)
     functions.insert(0x8001, instruction::or);
     functions.insert(0x8002, instruction::and);
     functions.insert(0x8003, instruction::xor);
-    functions.insert(0x8003, instruction::xor);
-    functions.insert(0x8003, instruction::xor);
-    functions.insert(0x8003, instruction::xor);
-    functions.insert(0x8003, instruction::xor);
-    functions.insert(0x8003, instruction::xor);
-
+    functions.insert(0x8004, instruction::addVy);
+    functions.insert(0x8005, instruction::sub);
+    functions.insert(0x8006, instruction::shr);
+    functions.insert(0x8007, instruction::subn);
+    functions.insert(0x800E, instruction::shl);
+    functions.insert(0x9000, instruction::sne);
+    functions.insert(0xA000, instruction::shl);
+    functions.insert(0xB000, instruction::shl);
+    functions.insert(0xC000, instruction::shl);
+    functions.insert(0xD000, instruction::shl);
+    functions.insert(0xE000, instruction::shl);
+    functions.insert(0xF000, instruction::shl);
 
 }
 
