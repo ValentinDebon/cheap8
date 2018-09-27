@@ -1,7 +1,19 @@
-all:
-	g++ -c *.cpp *.h
-	g++ *.o -o cheap8 -lsfml-graphics -lsfml-window -lsfml-system
+CXX=clang++
+CXXFLAGS=-g -pedantic -std=c++17 -fno-exceptions
+SOURCES=$(wildcard sources/*.cpp)
+BUILDDIRS=bin/
+BIN=bin/cheap8
+
+.PHONY: all clean
+
+all: $(BUILDDIRS) $(BIN)
 
 clean:
-	rm *.o
-	rm *.gch
+	rm -rf $(BUILDDIRS)
+
+$(BUILDDIRS):
+	mkdir $@
+
+$(BIN): $(SOURCES)
+	$(CXX) -o $@ $^
+
