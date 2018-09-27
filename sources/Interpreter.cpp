@@ -6,25 +6,6 @@
 
 using namespace Chip8;
 
-static const UInt8 FontSet[80] = {
-	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-	0x20, 0x60, 0x20, 0x20, 0x70, // 1
-	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-	0xF0, 0x30, 0xF0, 0x10, 0xF0, // 3
-	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-	0xF0, 0x80, 0xF0, 0x80, 0xE0, // E
-	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-};
-
 Interpreter::Interpreter(ErrorHandler *errorHandler) :
 errorHandler(errorHandler) { }
 
@@ -40,7 +21,7 @@ Interpreter::Create(const char *program, ErrorHandler *errorHandler) {
 
 		interpreter = new Interpreter(errorHandler);
 
-		bcopy(FontSet, interpreter->ram, sizeof(FontSet));
+		bcopy(Display::FontSet, interpreter->ram, sizeof(Display::FontSet));
 		ssize_t written = read(fd, interpreter->ram + 0x200, sizeof(interpreter->ram));
 		bzero(interpreter->ram + 0x200 + written, sizeof(interpreter->ram) - written);
 		close(fd);
@@ -178,17 +159,36 @@ Interpreter::step() {
 						UInt8 registerX = Instruction::X(instruction);
 						this->registers.V[registerX] = Instruction::KK(instruction);
 					} else {							// ADD Vx, byte
+						UInt8 registerX = Instruction::X(instruction);
+						this->registers.V[registerX] += Instruction::KK(instruction);
 					}
 				}
 			}
 		} else { // 0x8000 -> 0xFFFF
-			if(opcode < 0xC000) {
-				if(opcode < 0xE000) {
-				} else {
+			if(opcode < 0xC000) { // 0x8000 -> 0xBFFF
+				if(opcode < 0xA000) { // 0x8000 -> 0x9FFF
+					if(opcode == 0x8000) {
+						opcode = (0xF00F & instruction);
+					} else {
+					}
+				} else { // 0xA000 -> 0xBFFF
+					if(opcode == 0xA000) {						// LD I, addr
+						this->registers.I = opcode ^ instruction;
+					} else {							// JP V0, addr
+						this->registers.PC = (opcode ^ instruction) + this->registers.V[0];
+					}
 				}
-			} else {
-				if(opcode < 0xA000) {
-				} else {
+			} else { // 0xC000 -> 0xFFFF
+				if(opcode < 0xE000) { // 0xC000 -> 0xDFFF
+					if(opcode == 0xC000) {						// RND Vx, byte
+						this->registers.V[Instruction::X(instruction)]
+							= this->random() & Instruction::KK(instruction);
+					} else {							// DRW Vx, Vy, nibble
+					}
+				} else { // 0xE000 -> 0xFFFF
+					if(opcode == 0xE000) {
+					} else {
+					}
 				}
 			}
 		}

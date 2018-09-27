@@ -2,6 +2,9 @@
 #define CHIP8_INTERPRETER_H
 
 #include "ErrorHandler.h"
+#include "Display.h"
+
+#include <random>
 
 namespace Chip8 {
 
@@ -16,6 +19,15 @@ class Interpreter final {
 	Chip8::UInt16 stack[16];
 
 	Chip8::UInt8 ram[0x1000];
+
+	struct {
+		std::default_random_engine generator;
+		std::uniform_int_distribution<Chip8::UInt8> distribution
+			= std::uniform_int_distribution<Chip8::UInt8>(0, 255);
+		inline Chip8::UInt8 operator()(void) {
+			return this->distribution(generator);
+		}
+	} random;
 
 	ErrorHandler *errorHandler;
 
