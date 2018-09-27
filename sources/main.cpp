@@ -13,10 +13,11 @@ main(int argc,
 		Chip8::Interpreter::Create("tests/pong.rom", errorHandler);
 
 	while(!errorHandler->hasErrors()) {
-		struct timespec rqtp = { .tv_sec = 0, .tv_nsec = 16666666 };
+		struct timespec rqtp = { 0, 16666666 };
 		struct timespec rmtp;
 
-		while(nanosleep(&rqtp, &rmtp) == -1 && errno == EINTR) {
+		while(nanosleep(&rqtp, &rmtp) == -1
+			&& errno == EINTR) {
 			rqtp = rmtp;
 		}
 

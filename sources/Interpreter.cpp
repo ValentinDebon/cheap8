@@ -40,7 +40,7 @@ Interpreter::Create(const char *program, ErrorHandler *errorHandler) {
 
 		interpreter = new Interpreter(errorHandler);
 
-		memcpy(interpreter->ram, FontSet, sizeof(FontSet));
+		bcopy(FontSet, interpreter->ram, sizeof(FontSet));
 		ssize_t written = read(fd, interpreter->ram + 0x200, sizeof(interpreter->ram));
 		bzero(interpreter->ram + 0x200 + written, sizeof(interpreter->ram) - written);
 		close(fd);
@@ -103,17 +103,36 @@ Interpreter::pop(Chip8::UInt16 *address) {
 	return valid;
 }
 
+namespace Instruction {
+
+static inline UInt8
+X(UInt16 instruction) {
+	return (0x0F00 & instruction) >> 8;
+}
+
+static inline UInt8
+Y(UInt16 instruction) {
+	return (0x00F0 & instruction) >> 4;
+}
+
+static inline UInt8
+KK(UInt16 instruction) {
+	return 0x00FF & instruction;
+}
+
+}
+
 void
 Interpreter::step() {
 	UInt16 instruction;
 
 	if(this->access(this->registers.PC, &instruction)) {
-		UInt16 top4 = 0xF000 & instruction;
+		UInt16 opcode = 0xF000 & instruction;
 
-		if(top4 < 0x8000) { // 0x0000 -> 0x7FFF
-			if(top4 < 0x4000) { // 0x0000 -> 0x3FFF
-				if(top4 < 0x2000) { // 0x0000 -> 0x1FFF
-					if(top4 < 0x1000) { // 0x0000 -> 0x0FFF
+		if(opcode < 0x8000) { // 0x0000 -> 0x7FFF
+			if(opcode < 0x4000) { // 0x0000 -> 0x3FFF
+				if(opcode < 0x2000) { // 0x0000 -> 0x1FFF
+					if(opcode < 0x1000) { // 0x0000 -> 0x0FFF
 						if(instruction == 0x00E0) {				// CLS
 							// Clear the display
 						} else if(instruction == 0x00EE) {			// RET
@@ -123,34 +142,52 @@ Interpreter::step() {
 							// Ignored by modern interpreters
 						}
 					} else {							// JMP addr
-						this->registers.PC = top4 ^ instruction;
+						this->registers.PC = opcode ^ instruction;
 						return;
 					}
 				} else { // 0x2000 -> 0x3FFF
-					if(top4 == 0x2000) {						// CALL addr
+					if(opcode == 0x2000) {						// CALL addr
 						this->push(this->registers.PC);
-						this->registers.PC = top4 ^ instruction;
+						this->registers.PC = opcode ^ instruction;
 						return;
 					} else {							// SE Vx, byte
-						UInt8 registerIndex = (0x0F00 & instruction) >> 8;
-						UInt8 comparisonValue = (0x00FF & instruction);
-						if(this->registers.V[registerIndex] == comparisonValue) {
+						UInt8 registerX = Instruction::X(instruction);
+						UInt8 value = Instruction::KK(instruction);
+						if(this->registers.V[registerX] == value) {
 							this->registers.PC += 1;
 						}
 					}
 				}
 			} else { // 0x4000 -> 0x7FFF
-				if(top4 < 0x6000) { // 0x4000 -> 0x5FFF
+				if(opcode < 0x6000) { // 0x4000 -> 0x5FFF
+					if(opcode == 0x4000) {						// SNE Vx, byte
+						UInt8 registerX = Instruction::X(instruction);
+						UInt8 value = Instruction::KK(instruction);
+						if(this->registers.V[registerX] != value) {
+							this->registers.PC += 1;
+						}
+					} else if((0xF00F & instruction) == 0x5000) {			// SE Vx, Vy
+						UInt8 registerX = Instruction::X(instruction);
+						UInt8 registerY = Instruction::Y(instruction);
+						if(this->registers.V[registerX] == this->registers.V[registerY]) {
+							this->registers.PC += 1;
+						}
+					}
 				} else { // 0x6000 -> 0x7FFF
+					if(opcode == 0x6000) {						// LD Vx, byte
+						UInt8 registerX = Instruction::X(instruction);
+						this->registers.V[registerX] = Instruction::KK(instruction);
+					} else {							// ADD Vx, byte
+					}
 				}
 			}
 		} else { // 0x8000 -> 0xFFFF
-			if(top4 < 0xC000) {
-				if(top4 < 0xE000) {
+			if(opcode < 0xC000) {
+				if(opcode < 0xE000) {
 				} else {
 				}
 			} else {
-				if(top4 < 0xA000) {
+				if(opcode < 0xA000) {
 				} else {
 				}
 			}

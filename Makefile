@@ -15,5 +15,5 @@ $(BUILDDIRS):
 	mkdir $@
 
 $(BIN): $(SOURCES)
-	$(CXX) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
