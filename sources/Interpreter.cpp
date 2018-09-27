@@ -51,13 +51,12 @@ Interpreter::Create(const char *program, ErrorHandler *errorHandler) {
 
 bool
 Interpreter::access(Chip8::UInt16 address, Chip8::UInt8 *value) {
-	bool valid = true;
+	bool valid = address < sizeof(this->ram);
 
-	if(address < sizeof(this->ram)) {
+	if(valid) {
 		*value = this->ram[address];
 	} else {
 		this->errorHandler->segmentationFault(address);
-		valid = false;
 	}
 
 	return valid;
@@ -65,13 +64,40 @@ Interpreter::access(Chip8::UInt16 address, Chip8::UInt8 *value) {
 
 bool
 Interpreter::access(Chip8::UInt16 address, Chip8::UInt16 *value) {
-	bool valid = true;
+	bool valid = address < sizeof(this->ram) - 1;
 
-	if(address < sizeof(this->ram)) {
+	if(valid) {
 		*value = *((UInt16 *)(this->ram + address));
 	} else {
 		this->errorHandler->segmentationFault(address);
-		valid = false;
+	}
+
+	return valid;
+}
+
+bool
+Interpreter::push(Chip8::UInt16 address) {
+	bool valid = this->registers.SP < 16;
+
+	if(valid) {
+		this->registers.SP += 1;
+		this->stack[this->registers.SP - 1] = address;
+	} else {
+		this->errorHandler->stackOverflow(this->registers.PC);
+	}
+
+	return valid;
+}
+
+bool
+Interpreter::pop(Chip8::UInt16 *address) {
+	bool valid = this->registers.SP > 0;
+
+	if(valid) {
+		*address = this->stack[this->registers.SP - 1];
+		this->registers.SP -= 1;
+	} else {
+		this->errorHandler->stackUnderflow(this->registers.PC);
 	}
 
 	return valid;
@@ -90,27 +116,32 @@ Interpreter::step() {
 					if(top4 < 0x1000) { // 0x0000 -> 0x0FFF
 						if(instruction == 0x00E0) {				// CLS
 							// Clear the display
-						} else if(instruction == 0x00EE) {		// RET
-							// Return from subroutine
-						} else {								// SYS addr
+						} else if(instruction == 0x00EE) {			// RET
+							this->pop(&this->registers.PC);
+							return;
+						} else {						// SYS addr
 							// Ignored by modern interpreters
 						}
-					} else {									// JMP addr
+					} else {							// JMP addr
 						this->registers.PC = top4 ^ instruction;
 						return;
 					}
 				} else { // 0x2000 -> 0x3FFF
 					if(top4 == 0x2000) {						// CALL addr
-						// Call subroutine
-					} else {									// SE Vx, byte
-						if(this->registers.V[(0x0F00 & instruction) >> 8] == (0x00FF & instruction) {
+						this->push(this->registers.PC);
+						this->registers.PC = top4 ^ instruction;
+						return;
+					} else {							// SE Vx, byte
+						UInt8 registerIndex = (0x0F00 & instruction) >> 8;
+						UInt8 comparisonValue = (0x00FF & instruction);
+						if(this->registers.V[registerIndex] == comparisonValue) {
 							this->registers.PC += 1;
 						}
 					}
 				}
-			} else {
-				if(top4 < 0x6000) {
-				} else {
+			} else { // 0x4000 -> 0x7FFF
+				if(top4 < 0x6000) { // 0x4000 -> 0x5FFF
+				} else { // 0x6000 -> 0x7FFF
 				}
 			}
 		} else { // 0x8000 -> 0xFFFF
@@ -125,5 +156,7 @@ Interpreter::step() {
 			}
 		}
 	}
+
+	this->registers.PC += 1;
 }
 

@@ -24,6 +24,9 @@ class Interpreter final {
 	bool access(Chip8::UInt16 address, Chip8::UInt8 *value);
 	bool access(Chip8::UInt16 address, Chip8::UInt16 *value);
 
+	bool push(Chip8::UInt16 address);
+	bool pop(Chip8::UInt16 *address);
+
 public:
 	static Interpreter *Create(const char *program, ErrorHandler *errorHandler = nullptr);
 
